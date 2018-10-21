@@ -1,13 +1,17 @@
 /**
- * OpenHand Receive Handler
- * This program is responsible for handling the receiving end of OpenHand.
- * The program should receive sensor values from OpenHand Transmit through the XBee device
+ * Open Hand Receive Handler
+ * This program is responsible for handling the receiving end of Open Hand.
+ * The program should receive sensor values from Open Hand Transmit through the XBee device
  *    and adjust the motors' amplitude accordingly.
  */
 
 // Pin declarations
-const int frontMotorPin = 9;
-const int backMotorPin = 11;
+const int frontMotorPin = A3;
+const int backMotorPin = A0;
+
+// Constant declarations
+const int onTolerance = -60;
+const int offTolerance = 40;
 
 // Public variables
 bool started = false;
@@ -18,6 +22,8 @@ char thumbMsg[4];
 char fingerMsg[4];
 byte thumbIndex;
 byte fingerIndex;
+int lastThumbValue;
+int lastFingerValue;
 
 void setup() { 
   pinMode(frontMotorPin, OUTPUT);
@@ -27,10 +33,9 @@ void setup() {
  
  
 void loop() { 
-    
+//    Serial.println("waiting on data"); // For Debug Purposes
     while(Serial.available() > 0) {
       incomingByte = Serial.read();
-//      Serial.print(incomingByte);
 
      /**
       * Parse Packet
@@ -69,21 +74,29 @@ void loop() {
 
       // End of packet routine
       if (started && ended) {
+        
         // translate sensor values
         int thumbValue = atoi(thumbMsg);
         int fingerValue = atoi(fingerMsg);
 
+        Serial.print(thumbValue);
+        Serial.print(",");
+        Serial.println(fingerValue);
+        
         // Set the motor speeds
-        setMotor(backMotorPin, thumbValue);
-        setMotor(frontMotorPin, fingerValue);
+        setMotor(backMotorPin, thumbValue, isFinger);
+        setMotor(frontMotorPin, fingerValue, isFinger);
 
-        // Reset the packet flags
+        // Reset the packet flags and variables
         started = false;
         ended = false;
+        isFinger = false;
         thumbIndex = 0;
         fingerIndex = 0;
         thumbMsg[thumbIndex] = '\0';
         fingerMsg[fingerIndex] = '\0';
+        lastThumbValue = thumbValue;
+        lastFingerValue = fingerValue;
       }
   }
 } 
@@ -93,10 +106,22 @@ void loop() {
  * pin - motor pin
  * rawVal - raw sensor value assigned to motor
  */
-void setMotor(int pin, int rawVal) {
-  int newVal = 100;
-
-
+void setMotor(int pin, int rawValue, bool isFinger) {
+  int newVal;
+  int lastValue;
   
-  analogWrite(pin, newVal);
+  if (isFinger) {
+    lastValue = lastFingerValue;
+  } else {
+    lastValue = lastThumbValue;
+  }
+
+  int difference = rawValue - lastValue;
+  if (difference >= offTolerance) {
+    // Motor OFF
+    analogWrite(pin, 0);
+  } else if (difference <= onTolerance && rawValue <= 1024 && rawValue != 0) {
+    // Motor ON
+    analogWrite(pin, 140);
+  }
 }

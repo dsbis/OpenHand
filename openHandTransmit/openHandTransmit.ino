@@ -1,6 +1,6 @@
 /**
- * OpenHand Transmit Handler
- * This program is responsible for handling the transmit end of OpenHand.
+ * Open Hand Transmit Handler
+ * This program is responsible for handling the transmit end of Open Hand.
  * The program should receive data from the force sensors and transmit them with the Xbee device.
  */
 
@@ -21,6 +21,7 @@ void setup() {
 }
 
 void loop() {
+  
   // Sum repeated samples a finite amount of times to be averaged later
   int thumbSum = 0;
   int fingerSum = 0;
